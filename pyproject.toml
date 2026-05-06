@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smartbindb"
+version = "5.17.3"
+description = "Blazing-fast offline BIN (Bank Identification Number) lookup database with hundreds of thousands of records bundled."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "Abir Arafat Chawdhury", email = "abirxdhackz@gmail.com" }
+]
+keywords = ["bin", "bank", "card", "lookup", "offline", "smartbindb", "fintech", "iban"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pycountry>=22.3.5",
+    "pycountry-convert>=0.7.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=4.1",
+]
+docs = [
+    "sphinx>=7.0",
+    "furo>=2024.1.29",
+    "sphinx-copybutton>=0.5.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/abirxdhack/TheSmartBinDB"
+Documentation = "https://abirxdhack.github.io/TheSmartBinDB"
+Repository = "https://github.com/abirxdhack/TheSmartBinDB"
+Issues = "https://github.com/abirxdhack/TheSmartBinDB/issues"
+Changelog = "https://github.com/abirxdhack/TheSmartBinDB/releases"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["smartbindb*"]
+exclude = ["tests*", "docs*"]
+
+[tool.setuptools.package-data]
+smartbindb = ["data/*.db", "py.typed"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --tb=short"
+testpaths = ["tests"]
+python_files = ["test.py", "test_*.py"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["smartbindb"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+precision = 2

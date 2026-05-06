@@ -1,0 +1,5 @@
+include README.md
+include LICENSE
+include Makefile
+recursive-include smartbindb/data *.db
+include smartbindb/py.typed
