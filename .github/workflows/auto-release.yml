@@ -4,81 +4,77 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "smartbindb/__init__.py"
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
-  check-version:
-    name: Check Version Change
+  release:
+    name: Build, Publish & Release
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
-      changed: ${{ steps.version.outputs.changed }}
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Get version
+      - name: Extract version from __init__.py
         id: version
+        shell: bash
         run: |
           VERSION=$(grep -oP '__version__ = "\K[^"]+' smartbindb/__init__.py)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-          
-          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-
-  create-release:
-    name: Create GitHub Release
-    needs: check-version
-    if: needs.check-version.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ needs.check-version.outputs.tag }}
-          draft: false
-          prerelease: false
-          body: |
-            SmartBinDB ${{ needs.check-version.outputs.version }}
-            
-            Repository: https://github.com/abirxdhack/TheSmartBinDB
-            Documentation: https://abirxdhack.github.io/TheSmartBinDB
-
-  publish:
-    name: Publish to PyPI
-    needs: [check-version, create-release]
-    if: needs.check-version.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
+          echo "Detected version: $VERSION"
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install build tools
+      - name: Upgrade pip & install build tools
         run: |
-          python -m pip install --upgrade pip build
+          python -m pip install --upgrade pip
+          python -m pip install build twine
 
-      - name: Build distribution
-        run: python -m build
+      - name: Clean old builds
+        run: |
+          rm -rf dist build *.egg-info
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Verify package
+        run: |
+          twine check dist/*
+
+      - name: Show built files
+        run: |
+          ls -lah dist
 
       - name: Publish to PyPI
+        id: publish
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true
+
+      - name: Create GitHub tag
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Create GitHub Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          files: dist/*
