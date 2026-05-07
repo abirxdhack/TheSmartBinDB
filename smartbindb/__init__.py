@@ -50,7 +50,7 @@ Documentation site: https://abirxdhack.github.io/TheSmartBinDB
 
 from .smartdb import SmartBinDB
 
-__version__ = "5.17.6"
+__version__ = "5.17.7"
 __author__ = "Abir Arafat Chawdhury"
 __license__ = "MIT"
 __all__ = ["SmartBinDB", "__version__"]
