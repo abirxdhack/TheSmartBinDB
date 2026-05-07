@@ -4,76 +4,13 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "smartbindb/__init__.py"
 
 permissions:
   contents: write
 
 jobs:
-  check-version:
-    name: Check Version Change
+  release:
     runs-on: ubuntu-latest
-
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
-      changed: ${{ steps.version.outputs.changed }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Get package version
-        id: version
-        shell: bash
-        run: |
-          VERSION=$(grep -oP '__version__ = "\K[^"]+' smartbindb/__init__.py)
-
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-
-          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
-  create-release:
-    name: Create GitHub Release
-    needs: check-version
-
-    if: needs.check-version.outputs.changed == 'true'
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.check-version.outputs.tag }}
-          name: Release ${{ needs.check-version.outputs.tag }}
-          generate_release_notes: true
-          draft: false
-          prerelease: false
-
-  publish:
-    name: Publish to PyPI
-    needs:
-      - check-version
-      - create-release
-
-    if: needs.check-version.outputs.changed == 'true'
-
-    runs-on: ubuntu-latest
-
-    environment:
-      name: pypi
 
     steps:
       - name: Checkout repository
@@ -84,10 +21,27 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Upgrade pip and install build tools
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(grep -oP '__version__ = "\K[^"]+' smartbindb/__init__.py)
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+          echo "Version: $VERSION"
+
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install build twine
+
+      - name: Clean old builds
+        run: |
+          rm -rf dist
+          rm -rf build
+          rm -rf *.egg-info
 
       - name: Build package
         run: |
@@ -97,7 +51,18 @@ jobs:
         run: |
           twine check dist/*
 
-      - name: Publish package to PyPI
+      - name: Publish to PyPI
+        id: publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true
+
+      - name: Create GitHub Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
